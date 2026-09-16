@@ -5,7 +5,7 @@ spring:
     name: lucky-box
   datasource:
     driver-class-name: com.mysql.jdbc.Driver
-    url: jdbc:mysql://192.168.88.128/mystery_box?useSSL=false&serverTimezone=UTC
+    url: jdbc:mysql://192.168.88.128/lucky_box?useSSL=false&serverTimezone=UTC
     username:
     password:
   jackson:
@@ -16,7 +16,7 @@ spring:
       host: 192.168.88.128
       port: 6379
 mybatis-plus:
-  type-aliases-package: com.wyh.mysterybox.pojo.entity # ?????
+  type-aliases-package: com.wyh.luckyBox.pojo.entity # ?????
 logging:
   level:
     com.wyh: debug
