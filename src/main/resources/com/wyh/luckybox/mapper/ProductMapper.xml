@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.wyh.mysterybox.mapper.ProductMapper">
+
+    <select id="getProductList" resultType="com.wyh.luckybox.pojo.entity.Product">
+        select p.*, pc.name as category_name from product p left join product_category pc
+        on p.category_id = pc.id
+        <where>
+            <if test="dto.name != null and dto.name != ''">
+                and p.name like concat("%", #{dto.name}, "%")
+            </if>
+            <if test="dto.categoryId != null">
+                and p.category_id = #{dto.categoryId}
+            </if>
+            <if test="dto.categoryName != null and dto.categoryName != ''">
+                and pc.name like concat("%", #{dto.categoryName}, "%")
+            </if>
+            <if test="dto.brand != null and dto.brand != ''">
+                and p.brand like concat("%", #{dto.brand}, "%")
+            </if>
+            <if test="dto.tags != null and dto.tags != ''">
+                and p.tags like concat("%", #{dto.tags}, "%")
+            </if>
+            <if test="dto.specifications != null and dto.specifications.size() > 0">
+                <foreach collection="dto.specifications" item="s" index="key">
+                    and JSON_CONTAINS(p.specifications,  JSON_QUOTE(#{s}), '$."${key}")
+                </foreach>
+            </if>
+            <if test="dto.attributes != null and dto.attributes.size() > 0">
+                <foreach collection="dto.attributes" index="key" item="a">
+                    and JSON_CONTAINS(p.attributes, JSON_OBJECT('${key}', #{a}))
+                </foreach>
+            </if>
+        </where>
+        <choose>
+            <when test="dto.sortType != null and dto.sortType == 0">
+                order by p.price desc
+            </when>
+            <when test="dto.sortType != null and dto.sortType == 1">
+                order by p.price asc
+            </when>
+            <when test="dto.sortType != null and dto.sortType == 2">
+                order by p.sale desc
+            </when>
+            <otherwise>
+                order by p.created_time desc
+            </otherwise>
+        </choose>
+    </select>
+</mapper>

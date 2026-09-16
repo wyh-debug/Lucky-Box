@@ -1,0 +1,22 @@
+server:
+  port: 8081
+spring:
+  application:
+    name: lucky-box
+  datasource:
+    driver-class-name: com.mysql.jdbc.Driver
+    url: jdbc:mysql://192.168.88.128/mystery_box?useSSL=false&serverTimezone=UTC
+    username:
+    password:
+  jackson:
+    default-property-inclusion: non_null # JSON?????????
+  data:
+    redis:
+      password:
+      host: 192.168.88.128
+      port: 6379
+mybatis-plus:
+  type-aliases-package: com.wyh.mysterybox.pojo.entity # ?????
+logging:
+  level:
+    com.wyh: debug
