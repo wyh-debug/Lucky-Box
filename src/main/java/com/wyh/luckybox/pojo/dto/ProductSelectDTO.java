@@ -5,10 +5,7 @@ import lombok.Data;
 import java.util.Map;
 
 @Data
-public class ProductSelectDTO {
-    // 分页参数
-    private Integer page = 1;   // 默认第一页
-    private Integer size = 10;  // 默认每页10条
+public class ProductSelectDTO extends PageQuery{
 
     private String name;
     private Long categoryId;
@@ -20,6 +17,6 @@ public class ProductSelectDTO {
     private Map<String, Object> attributes;             // 属性
 
     private String qualityType;            // 品质类型
-    private Integer sortType;           //排序类型
+
 
 }

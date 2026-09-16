@@ -3,6 +3,7 @@ package com.wyh.luckybox.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.wyh.luckybox.pojo.dto.PageDTO;
 import com.wyh.luckybox.pojo.dto.ProductCategorySelectDTO;
 import com.wyh.luckybox.pojo.dto.Result;
 import com.wyh.luckybox.pojo.entity.ProductCategory;
@@ -28,7 +29,8 @@ public class ProductCategoryServiceImpl extends ServiceImpl<ProductCategoryMappe
         Page<ProductCategoryPageVO> page = new Page<>(productCategorySelectDTO.getPage(), productCategorySelectDTO.getSize());
         Page<ProductCategoryPageVO> productCategoryPageVOPage = productCategoryMapper.selectPageProductCategory(page, productCategorySelectDTO);
         //List<ProductCategoryPageVO> list = productCategoryPageVOPage.getRecords();
-        return Result.ok(productCategoryPageVOPage);
+        PageDTO r = PageDTO.build(productCategoryPageVOPage, ProductCategoryPageVO.class);
+        return Result.ok(r);
     }
 
     @Override

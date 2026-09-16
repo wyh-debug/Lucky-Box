@@ -10,6 +10,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.wyh.luckybox.constant.SystemConstants;
 import com.wyh.luckybox.mapper.ProductMapper;
 import com.wyh.luckybox.mapper.ProductSkuMapper;
+import com.wyh.luckybox.pojo.dto.PageDTO;
 import com.wyh.luckybox.pojo.dto.ProductSelectDTO;
 import com.wyh.luckybox.pojo.dto.RedisData;
 import com.wyh.luckybox.pojo.dto.Result;
@@ -87,7 +88,8 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
             throw new RuntimeException();
         }
         Page<Product> productList = productMapper.getProductList(page, productSelectDTO);
-        return Result.ok(productList);
+        PageDTO r = PageDTO.build(productList, Product.class);
+        return Result.ok(r);
     }
 
     @Override
@@ -120,7 +122,8 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
         if(SystemConstants.SALE_UP == sort) {
             wrapper.orderByAsc(Product::getSale);
         }
-        return Result.ok(this.page(page,wrapper));
+        PageDTO r = PageDTO.build(this.page(page, wrapper), Product.class);
+        return Result.ok(r);
     }
 
     private boolean validateKey(Map<String, Object> map) {
