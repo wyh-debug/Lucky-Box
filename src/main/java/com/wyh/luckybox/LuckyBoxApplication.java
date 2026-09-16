@@ -4,10 +4,10 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class MysteryBoxApplication {
+public class LuckyBoxApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(MysteryBoxApplication.class, args);
+		SpringApplication.run(LuckyBoxApplication.class, args);
 	}
 
 }
