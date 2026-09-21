@@ -12,4 +12,6 @@ public class RedisConstants {
     public static final String PRODUCT_SKU_KEY = "product:sku:";
     public static final Long PRODUCT_SKU_TTL = 36000L;
     public static final Long PRODUCT_SKU_EXP = 1440L;
+    public static final String PRODUCT_SALE_KEY = "product:sale:";
+    public static final String LOCK_ORDER_KEY = "lock:order:";
 }

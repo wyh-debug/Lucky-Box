@@ -2,12 +2,14 @@ package com.wyh.luckybox.pojo.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
 @Data
 @Accessors(chain = true)
+@NoArgsConstructor
 @TableName("base_order")
 public class BaseOrder implements Serializable {
     private static final long serialVersionUID = 16L;
@@ -28,8 +30,8 @@ public class BaseOrder implements Serializable {
     private Long updateId;                 // 更新人ID
 
     private Long paymentId;                // 支付ID
-    private String type;                   // 订单类型：PRODUCT-商品, MYSTERY_BOX-盲盒
-    private String status;                 // 订单状态
+    private Integer type;                   // 订单类型： 0 PRODUCT-商品,  1 LUCKY_BOX-盲盒
+    private Integer status;                 // 订单状态  0-待支付, 1-已支付, 2-已发货, 3-已完成, 4-已取消, 5-已退款,
     private String address;                // 地址快照
     private String remark;                 // 备注
     private String trackingNumber;         // 物流单号
