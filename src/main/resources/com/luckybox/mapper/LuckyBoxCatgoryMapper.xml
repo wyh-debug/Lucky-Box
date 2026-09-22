@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.luckybox.mapper.LuckyBoxCategoryMapper">
+    <select id="selectCategoryPage" resultType="com.luckybox.pojo.entity.LuckyBoxCategory">
+        select * from lucky_box_category
+        <where>
+            <if test="dto.id != null">
+                and id = #{dto.id}
+            </if>
+            <if test="dto.name != null and dto.name != ''">
+                and name like concat("%", #{dto.name}, "%")
+            </if>
+        </where>
+    </select>
+</mapper>
