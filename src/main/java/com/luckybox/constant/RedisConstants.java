@@ -14,4 +14,8 @@ public class RedisConstants {
     public static final Long PRODUCT_SKU_EXP = 1440L;
     public static final String PRODUCT_SALE_KEY = "product:sale:";
     public static final String LOCK_ORDER_KEY = "lock:order:";
+    public static final String CACHE_BOX_KEY = "cache:box:";
+    public static final Long CACHE_BOX_TTL = 36000L;
+    public static final Long CACHE_BOX_EXP = 1440L;
+    public static final String box_LOCK_KEY = "box:lock:";
 }

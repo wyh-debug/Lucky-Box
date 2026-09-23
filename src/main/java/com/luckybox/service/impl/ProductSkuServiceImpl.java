@@ -30,7 +30,7 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
     private SynthesisRuleMapper synthesisRuleMapper;
 
     @Resource
-    private MysteryBoxProductRelMapper mysteryBoxProductRelMapper;
+    private LuckyBoxProductMapper luckyBoxProductMapper;
     @Resource
     private ProductOrderMapper productOrderMapper;
 
@@ -60,7 +60,7 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
         }
         boolean flag1 = synthesisRecordMapper.existSynthesisRecord(id);
         boolean flag2 = synthesisRuleMapper.existSynthesisRule(id);
-        boolean flag3 = mysteryBoxProductRelMapper.existMysteryBoxProductRel(id);
+        boolean flag3 = luckyBoxProductMapper.existLuckyBoxProduct(id);
         boolean flag4 = productOrderMapper.existsProductOrder(id);
         if(flag1 || flag2 || flag3 || flag4) {
             return Result.fail("不可删除");

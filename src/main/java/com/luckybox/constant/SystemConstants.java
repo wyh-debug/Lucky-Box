@@ -25,6 +25,9 @@ public class SystemConstants {
     public static final Boolean ADDRESS_NOT_TOP  = false;
     public static final Boolean ADDRESS_IS_TOP  = true;
 
+    // 盲盒类型：0-商品盲盒, 1-抽卡盲盒
+    public static final Integer BOX_TYPE_PRODUCT  = 0;
+    public static final Integer BOX_TYPE_CARD  = 1;
 
 
 

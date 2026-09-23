@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 @Data
 @Accessors(chain = true)
 @TableName("lucky_box_product")
-public class LuckyBoxProductRel implements Serializable {
+public class LuckyBoxProduct implements Serializable {
     private static final long serialVersionUID = 9L;
 
     @TableId(type = IdType.AUTO)

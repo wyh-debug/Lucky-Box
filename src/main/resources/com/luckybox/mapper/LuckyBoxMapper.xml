@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.luckybox.mapper.LuckyBoxMapper">
+
+
+    <select id="getBoxList" resultType="com.luckybox.pojo.vo.LuckyBoxVO">
+        select b.*, c.name as categoryName from lucky_box as b left join lucky_box_category as c on
+            b.category_id = c.id
+        <where>
+            <if test="dto.name != null and dto.name != ''">
+                and b.name like concat("%", #{dto.name}, "%")
+            </if>
+            <if test="dto.details != null and dto.details !=''">
+                and b.details like concat("%", #{dto.details}, "%")
+            </if>
+            <if test="dto.categoryId != null">
+                and b.category_id = #{dto.categoryId}
+            </if>
+            <if test="dto.boxType != null">
+                and b.box_type = #{dto.boxType}
+            </if>
+            <if test="dto.status != null">
+                and b.status = #{dto.status}
+            </if>
+        </where>
+        <choose>
+            <when test="dto.orderField != null and dto.orderField != '' and dto.orderDirection != null and dto.orderDirection != ''">
+                order by ${dto.orderField} ${dto.orderDirection}
+            </when>
+            <when test="dto.orderField != null and dto.orderField != '' ">
+                order by ${dto.orderField} desc
+            </when>
+            <otherwise>
+                order by created_time desc
+            </otherwise>
+        </choose>
+    </select>
+<!--    /** 排序字段（可选，用于动态排序） */-->
+<!--    private String orderField;-->
+
+<!--    /** 排序方向：asc / desc（可选） */-->
+<!--    private String orderDirection;-->
+</mapper>

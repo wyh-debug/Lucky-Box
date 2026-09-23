@@ -1,7 +1,10 @@
 package com.luckybox.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.luckybox.pojo.dto.LuckyBoxSelectDTO;
 import com.luckybox.pojo.entity.LuckyBox;
+import com.luckybox.pojo.vo.LuckyBoxVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -10,4 +13,6 @@ import org.apache.ibatis.annotations.Select;
 public interface LuckyBoxMapper extends BaseMapper<LuckyBox> {
     @Select("SELECT EXISTS(SELECT 1 FROM lucky_box WHERE category_id = #{categoryId})")
     boolean existsByCategoryId(@Param("categoryId") Long categoryId);
+
+    Page<LuckyBoxVO> getBoxList(Page page, @Param("dto") LuckyBoxSelectDTO luckyBoxSelectDTO);
 }
