@@ -26,6 +26,7 @@ import java.time.LocalDateTime;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 @Service
 public class LuckyBoxServiceImpl extends ServiceImpl<LuckyBoxMapper, LuckyBox> implements ILuckyBoxService {
@@ -115,86 +116,12 @@ public class LuckyBoxServiceImpl extends ServiceImpl<LuckyBoxMapper, LuckyBox> i
 
     @Override
     public Result getLuckyBox(Long id) {
-        String key = RedisConstants.CACHE_BOX_KEY + id;
-        //查询缓存
-        String json = stringRedisTemplate.opsForValue().get(key);
-        if("NULL".equals(json)) {
-            return Result.fail("盲盒不存在");
+        LuckyBox luckyBox = cacheClient.handleCacheBreakDown(RedisConstants.CACHE_BOX_KEY, id, LuckyBox.class, (boxId) -> this.getById(boxId));
+        if(luckyBox == null) {
+            return Result.fail("商品不存在");
         }
-
-        if(json == null || StrUtil.isBlank(json)) {
-            RLock lock = redissonClient.getLock(RedisConstants.box_LOCK_KEY + id);
-            boolean isLock = false;
-            //从数据库找
-            isLock = lock.tryLock();
-            try {
-                if(isLock) {
-                    //拿到锁后查一次，可能刚写好
-                    String retryJson = stringRedisTemplate.opsForValue().get(key);
-                    if(!StrUtil.isBlank(retryJson)) {
-                        if("NULL".equals(retryJson)) {
-                            return Result.fail("盲盒不存在");
-                        }
-                        RedisData retryData = JSONUtil.toBean(retryJson, RedisData.class);
-                        return Result.ok(JSONUtil.toBean((JSONObject) retryData.getData(), LuckyBox.class));
-                    }
-                    LuckyBox box = this.getById(id);
-                    if(box == null) {
-                        stringRedisTemplate.opsForValue().set(key, "NULL", 1, TimeUnit.MINUTES);
-                        return Result.fail("盲盒不存在");
-                    }
-                    cacheClient.setWithLogicalExpire(key, box, RedisConstants.CACHE_BOX_EXP, RedisConstants.CACHE_BOX_TTL, TimeUnit.MINUTES);
-                    return Result.ok(box);
-                }
-            } finally {
-                if(lock.isLocked() && lock.isHeldByCurrentThread()) {
-                    lock.unlock();
-                }
-            }
-            return Result.fail("系统繁忙稍后再试");
-
-        }else{
-            RedisData data = JSONUtil.toBean(json, RedisData.class);
-            //逻辑过期
-            if(LocalDateTime.now().isAfter(data.getExpire())) {
-                //异步调用更新
-                EXECUTOR_SERVICE.submit(()->{
-                    RLock lock = redissonClient.getLock(RedisConstants.box_LOCK_KEY + id);
-                    boolean isLock = false;
-                    try {
-                        isLock = lock.tryLock();
-                        if(!isLock) {
-                            return;
-                        }
-                        //拿到锁后查一次，可能刚写好
-                        String latestJson = stringRedisTemplate.opsForValue().get(key);
-                        if (StrUtil.isNotBlank(latestJson) && !"NULL".equals(latestJson)) {
-                            RedisData latestData = JSONUtil.toBean(latestJson, RedisData.class);
-                            if (latestData.getExpire().isAfter(LocalDateTime.now())) {
-                                return; // 已被其他线程刷新，跳过
-                            }
-                        }
-                        LuckyBox box = this.getById(id);
-                        if(box == null) {
-                            stringRedisTemplate.opsForValue().set(key, "NULL", 1, TimeUnit.MINUTES);
-                            return;
-                        }
-                        cacheClient.setWithLogicalExpire(key, box, RedisConstants.CACHE_BOX_EXP, RedisConstants.CACHE_BOX_TTL, TimeUnit.MINUTES);
-                    }finally {
-                        if(lock.isLocked() && lock.isHeldByCurrentThread()) {
-                            lock.unlock();
-                        }
-                    }
-                });
-                LuckyBox luckyBox = BeanUtil.toBean(data.getData(), LuckyBox.class);
-                return Result.ok(luckyBox);
-            }else {
-                //没过期
-                //不知道需不需要刷新逻辑过期时间？
-                LuckyBox luckyBox = BeanUtil.toBean(data.getData(), LuckyBox.class);
-                return Result.ok(luckyBox);
-            }
-        }
+        return  Result.ok(luckyBox);
     }
+
 
 }
