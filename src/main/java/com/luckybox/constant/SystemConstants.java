@@ -29,7 +29,10 @@ public class SystemConstants {
     public static final Integer BOX_TYPE_PRODUCT  = 0;
     public static final Integer BOX_TYPE_CARD  = 1;
 
-
+    //0-SYSTEM-系统, 1-BOX-盲盒, 2-ORDER-订单',
+    public static final Integer NOTIFICATION_TYPE_SYSTEM = 0;
+    public static final Integer NOTIFICATION_TYPE_BOX = 1;
+    public static final Integer NOTIFICATION_TYPE_ORDER = 2;
 
 
 }

@@ -2,6 +2,12 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="com.luckybox.mapper.LuckyBoxMapper">
+    <update id="updateBatchByIds">
+        update lucky_box set status = 1 where id in
+                                        <foreach collection="boxIds" item="id" separator="," close=")" open="(">
+                                            #{id}
+                                        </foreach>
+    </update>
 
 
     <select id="getBoxList" resultType="com.luckybox.pojo.vo.LuckyBoxVO">

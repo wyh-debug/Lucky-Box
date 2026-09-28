@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.luckybox.mapper.LuckyBoxProductMapper">
+    <insert id="insertBatch">
+        insert into lucky_box_product (created_time, update_time, creator_id, update_id, lucky_box_id, product_sku_id, probability, sort_order) values
+        <foreach collection="ls" item="i" separator=",">
+           (#{i.createdTime}, #{i.updateTime}, #{i.creatorId}, #{i.updateId}, #{i.luckyBoxId}, #{i.productSkuId}, #{i.probability}, #{i.sortOrder})
+        </foreach>
+
+    </insert>
+    <select id="getBatchByBoxIds" resultType="com.luckybox.pojo.entity.LuckyBoxProduct">
+        select * from lucky_box_product where lucky_box_id in
+                                            <foreach collection="boxIds" open="(" close=")" separator="," item="id" >
+                                                #{id}
+                                            </foreach>
+    </select>
+</mapper>

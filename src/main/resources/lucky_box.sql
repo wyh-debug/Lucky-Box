@@ -5,13 +5,13 @@
  Source Server Type    : MySQL
  Source Server Version : 260700
  Source Host           : 192.168.88.128:3306
- Source Schema         : mystery_box
+ Source Schema         : lucky_box
 
  Target Server Type    : MySQL
  Target Server Version : 260700
  File Encoding         : 65001
 
- Date: 16/09/2026 10:37:20
+ Date: 27/09/2026 18:42:20
 */
 
 SET NAMES utf8mb4;
@@ -40,25 +40,21 @@ CREATE TABLE `address`  (
   `is_top` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否置顶',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_user_id`(`user_id` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '地址表' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Records of address
--- ----------------------------
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '地址表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for base_order
 -- ----------------------------
 DROP TABLE IF EXISTS `base_order`;
 CREATE TABLE `base_order`  (
-  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '订单ID',
+  `id` bigint UNSIGNED NOT NULL COMMENT '订单ID',
   `created_time` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   `update_time` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
   `creator_id` bigint UNSIGNED NOT NULL COMMENT '创建人ID（用户ID）',
   `update_id` bigint UNSIGNED NOT NULL,
-  `payment_id` bigint UNSIGNED NOT NULL COMMENT '支付ID',
-  `type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '订单类型：PRODUCT-商品, MYSTERY_BOX-盲盒',
-  `status` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'PENDING' COMMENT '订单状态：PENDING-待支付, PAID-已支付, SHIPPED-已发货, COMPLETED-已完成, CANCELLED-已取消, REFUNDED-已退款',
+  `payment_id` bigint UNSIGNED NULL DEFAULT NULL COMMENT '支付ID',
+  `type` tinyint NOT NULL COMMENT '订单类型：0-商品, 1-盲盒',
+  `status` tinyint NOT NULL DEFAULT 0 COMMENT '订单状态：0-待支付, 1-已支付, 2-已发货, 3-已完成, 4-已取消, 5-已退款',
   `address` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '地址快照',
   `remark` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '备注',
   `tracking_number` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '物流单号',
@@ -69,10 +65,6 @@ CREATE TABLE `base_order`  (
   INDEX `idx_type`(`type` ASC) USING BTREE,
   INDEX `idx_status`(`status` ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '基础订单（父表）' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Records of base_order
--- ----------------------------
 
 -- ----------------------------
 -- Table structure for card
@@ -97,10 +89,6 @@ CREATE TABLE `card`  (
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '卡片表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
--- Records of card
--- ----------------------------
-
--- ----------------------------
 -- Table structure for card_type
 -- ----------------------------
 DROP TABLE IF EXISTS `card_type`;
@@ -116,10 +104,6 @@ CREATE TABLE `card_type`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_code`(`code` ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '卡片类型表' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Records of card_type
--- ----------------------------
 
 -- ----------------------------
 -- Table structure for coupon
@@ -147,10 +131,6 @@ CREATE TABLE `coupon`  (
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '优惠券定义表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
--- Records of coupon
--- ----------------------------
-
--- ----------------------------
 -- Table structure for coupon_seckill
 -- ----------------------------
 DROP TABLE IF EXISTS `coupon_seckill`;
@@ -163,10 +143,6 @@ CREATE TABLE `coupon_seckill`  (
   `update_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`coupon_id`) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '秒杀优惠券扩展表' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Records of coupon_seckill
--- ----------------------------
 
 -- ----------------------------
 -- Table structure for lucky_box
@@ -184,15 +160,11 @@ CREATE TABLE `lucky_box`  (
   `price` bigint NOT NULL COMMENT '价格（单位：分）',
   `cover` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '封面',
   `category_id` bigint UNSIGNED NOT NULL COMMENT '类别ID',
-  `box_type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'PRODUCT' COMMENT '盲盒类型：PRODUCT-商品盲盒, CARD-抽卡盲盒',
+  `box_type` tinyint(1) NOT NULL DEFAULT 0 COMMENT '盲盒类型：0-商品盲盒, 1-抽卡盲盒',
   `status` tinyint(1) NOT NULL DEFAULT 0 COMMENT '状态：0-启用, 1-禁用',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_category_id`(`category_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '盲盒' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Records of lucky_box
--- ----------------------------
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '盲盒' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for lucky_box_card
@@ -210,11 +182,7 @@ CREATE TABLE `lucky_box_card`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_mystery_box_id`(`lucky_box_id` ASC) USING BTREE,
   INDEX `idx_card_id`(`card_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '盲盒-卡片关联表' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Records of lucky_box_card
--- ----------------------------
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '盲盒-卡片关联表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for lucky_box_category
@@ -231,23 +199,14 @@ CREATE TABLE `lucky_box_category`  (
   `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '描述',
   `sort_order` int NULL DEFAULT 0 COMMENT '排序号',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '盲盒类别' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Records of lucky_box_category
--- ----------------------------
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '盲盒类别' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for lucky_box_order
 -- ----------------------------
 DROP TABLE IF EXISTS `lucky_box_order`;
 CREATE TABLE `lucky_box_order`  (
-  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
-  `created_time` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-  `update_time` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-  `creator_id` bigint UNSIGNED NOT NULL,
-  `update_id` bigint UNSIGNED NOT NULL,
-  `base_order_id` bigint UNSIGNED NOT NULL COMMENT '盲盒订单ID',
+  `base_order_id` bigint UNSIGNED NOT NULL,
   `lucky_box_id` bigint UNSIGNED NOT NULL COMMENT '盲盒ID',
   `lucky_box_snapshot` json NOT NULL COMMENT '盲盒信息快照',
   `lucky_box_count` int NOT NULL COMMENT '盲盒数量',
@@ -255,14 +214,9 @@ CREATE TABLE `lucky_box_order`  (
   `winning_product_snapshot` json NOT NULL COMMENT '中奖商品快照',
   `product_order_id` bigint UNSIGNED NULL DEFAULT NULL COMMENT '关联的商品订单ID（发货单）',
   `cards_drawn` json NULL COMMENT '附赠的卡片列表快照',
-  PRIMARY KEY (`id`) USING BTREE,
-  INDEX `idx_mystery_box_order_id`(`base_order_id` ASC) USING BTREE,
+  PRIMARY KEY (`base_order_id`) USING BTREE,
   INDEX `idx_product_order_id`(`product_order_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '盲盒订单项' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Records of lucky_box_order
--- ----------------------------
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '盲盒订单项' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for lucky_box_product
@@ -281,11 +235,28 @@ CREATE TABLE `lucky_box_product`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_mystery_box_id`(`lucky_box_id` ASC) USING BTREE,
   INDEX `idx_product_sku_id`(`product_sku_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '盲盒-商品奖池关联表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 12 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '盲盒-商品奖池关联表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
--- Records of lucky_box_product
+-- Table structure for notification
 -- ----------------------------
+DROP TABLE IF EXISTS `notification`;
+CREATE TABLE `notification`  (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '通知ID',
+  `created_time` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `update_time` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+  `creator_id` bigint UNSIGNED NOT NULL COMMENT '创建人ID',
+  `update_id` bigint UNSIGNED NOT NULL COMMENT '更新人ID',
+  `user_id` bigint UNSIGNED NOT NULL COMMENT '接收用户ID',
+  `title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '标题',
+  `content` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '内容',
+  `type` tinyint NOT NULL COMMENT '类型：0-SYSTEM-系统, 1-BOX-盲盒, 2-ORDER-订单',
+  `biz_id` bigint UNSIGNED NULL DEFAULT NULL COMMENT '关联业务ID（如盲盒ID）',
+  `is_read` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否已读：0-未读, 1-已读',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_user_read`(`user_id` ASC, `is_read` ASC) USING BTREE,
+  INDEX `idx_created_time`(`created_time` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '消息通知表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for payment
@@ -305,10 +276,6 @@ CREATE TABLE `payment`  (
   `trade_no` varchar(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '第三方交易号',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '支付表' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Records of payment
--- ----------------------------
 
 -- ----------------------------
 -- Table structure for product
@@ -336,12 +303,6 @@ CREATE TABLE `product`  (
 ) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '商品表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
--- Records of product
--- ----------------------------
-INSERT INTO `product` VALUES (4, '2026-09-01 15:29:24.652637', '2026-09-01 15:29:24.653637', 2, 2, 'iPhone 15 Pro Max', 899900, NULL, 'Apple', 2, '最新款旗舰手机，搭载A17芯片，钛金属边框', '热销,新品,5G,旗舰', '{\"存储\": \"256GB\", \"网络\": \"5G\", \"颜色\": \"原色钛金属\", \"屏幕尺寸\": \"6.7英寸\"}', '{\"产地\": \"中国\", \"保修期\": \"12个月\", \"包装清单\": \"手机、数据线、卡针\"}', 'QUALITY_A', NULL);
-INSERT INTO `product` VALUES (5, '2026-09-15 20:19:28.715044', '2026-09-15 20:19:28.717074', 2, 2, 'OPPO A7 Pro Max', 299900, 'https://example.com/images/oppo_a7_pro_max.jpg', 'OPPO', 2, '机身尺寸：长162.98mm，宽77.97mm，厚8.57mm。机身重量：226g。入网型号：PYC110，上市日期：2026-08-07。', '5G,快充,高像素,OLED屏', '{\"屏幕刷新率\": \"120Hz\"}', '{\"上市日期\": \"2026-08-07\", \"入网型号\": \"PYC110\", \"机身尺寸\": \"长162.98mm,宽77.97mm,厚8.57mm\", \"机身重量\": \"226g\"}', 'QUALITY_A', NULL);
-
--- ----------------------------
 -- Table structure for product_category
 -- ----------------------------
 DROP TABLE IF EXISTS `product_category`;
@@ -361,39 +322,17 @@ CREATE TABLE `product_category`  (
 ) ENGINE = InnoDB AUTO_INCREMENT = 13 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '商品类别' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
--- Records of product_category
--- ----------------------------
-INSERT INTO `product_category` VALUES (1, '2026-08-20 14:45:40.180808', '2026-08-20 14:45:40.183814', 2, 2, '电子产品', NULL, NULL, '手机、电脑、平板等数码产品', 1);
-INSERT INTO `product_category` VALUES (2, '2026-08-20 14:48:44.063989', '2026-08-20 14:48:44.066512', 2, 2, '手机', 1, NULL, '手机产品', 1);
-INSERT INTO `product_category` VALUES (3, '2026-08-20 14:49:59.103116', '2026-08-20 14:49:59.104115', 2, 2, '电脑', 1, NULL, '电脑产品', 2);
-INSERT INTO `product_category` VALUES (4, '2026-08-20 14:50:59.081733', '2026-08-20 14:50:59.081733', 2, 2, '服装', NULL, NULL, '上衣，裤子，裙子等', 2);
-INSERT INTO `product_category` VALUES (5, '2026-08-20 14:51:40.421823', '2026-08-20 14:51:40.421823', 2, 2, '裤子', 4, NULL, '裤子', 1);
-INSERT INTO `product_category` VALUES (6, '2026-08-20 14:51:51.251795', '2026-08-20 14:51:51.251795', 2, 2, '裙子', 4, NULL, '裙子', 2);
-INSERT INTO `product_category` VALUES (7, '2026-08-20 14:56:52.177356', '2026-08-20 14:56:52.177356', 2, 2, '短袖', 4, NULL, '短袖', 3);
-INSERT INTO `product_category` VALUES (8, '2026-08-20 14:57:11.390148', '2026-08-20 16:02:36.257951', 2, 2, '棉袄', 4, NULL, '棉袄', 4);
-INSERT INTO `product_category` VALUES (12, '2026-08-20 19:16:37.649334', '2026-08-20 19:16:37.651865', 2, 2, '礼服', 4, NULL, '礼服', 3);
-
--- ----------------------------
 -- Table structure for product_order
 -- ----------------------------
 DROP TABLE IF EXISTS `product_order`;
 CREATE TABLE `product_order`  (
-  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
-  `created_time` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-  `update_time` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-  `creator_id` bigint UNSIGNED NOT NULL,
-  `update_id` bigint UNSIGNED NOT NULL,
   `base_order_id` bigint UNSIGNED NOT NULL COMMENT '商品订单ID',
   `product_sku_id` bigint UNSIGNED NOT NULL COMMENT '商品SKU ID',
   `count` int NOT NULL COMMENT '数量',
-  PRIMARY KEY (`id`) USING BTREE,
+  PRIMARY KEY (`base_order_id`) USING BTREE,
   INDEX `idx_product_order_id`(`base_order_id` ASC) USING BTREE,
   INDEX `idx_product_sku_id`(`product_sku_id` ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '商品订单项' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Records of product_order
--- ----------------------------
 
 -- ----------------------------
 -- Table structure for product_sku
@@ -416,14 +355,6 @@ CREATE TABLE `product_sku`  (
 ) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '商品SKU' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
--- Records of product_sku
--- ----------------------------
-INSERT INTO `product_sku` VALUES (1, '2026-09-15 20:29:40.421318', '2026-09-15 20:29:40.425538', 2, 2, 5, 'https://example.com/images/oppo_orange_12_256.jpg', 229415, 100, '前橙似锦 12GB+256GB 版', '{\"存储容量\": \"256GB\", \"机身颜色\": \"前橙似锦\", \"运行内存\": \"12GB\"}');
-INSERT INTO `product_sku` VALUES (2, '2026-09-15 20:30:01.620888', '2026-09-15 20:30:01.620888', 2, 2, 5, 'https://example.com/images/oppo_blue_16_512.jpg', 259900, 50, '深海蓝 16GB+512GB 版', '{\"存储容量\": \"512GB\", \"机身颜色\": \"深海蓝\", \"运行内存\": \"16GB\"}');
-INSERT INTO `product_sku` VALUES (3, '2026-09-15 20:30:10.261663', '2026-09-15 20:30:10.261663', 2, 2, 4, 'https://example.com/images/iphone15_titanium_256.jpg', 899900, 100, '原色钛金属 256GB 版', '{\"存储\": \"256GB\", \"网络\": \"5G\", \"颜色\": \"原色钛金属\", \"屏幕尺寸\": \"6.7英寸\"}');
-INSERT INTO `product_sku` VALUES (4, '2026-09-15 20:30:22.238726', '2026-09-15 20:30:22.238726', 2, 2, 4, 'https://example.com/images/iphone15_black_512.jpg', 1099900, 50, '黑色钛金属 512GB 版', '{\"存储\": \"512GB\", \"网络\": \"5G\", \"颜色\": \"黑色钛金属\", \"屏幕尺寸\": \"6.7英寸\"}');
-
--- ----------------------------
 -- Table structure for refund_record
 -- ----------------------------
 DROP TABLE IF EXISTS `refund_record`;
@@ -443,10 +374,6 @@ CREATE TABLE `refund_record`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_order_id`(`order_id` ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '退款记录' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Records of refund_record
--- ----------------------------
 
 -- ----------------------------
 -- Table structure for seckill_order
@@ -478,10 +405,6 @@ CREATE TABLE `seckill_order`  (
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '秒杀订单表（独立）' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
--- Records of seckill_order
--- ----------------------------
-
--- ----------------------------
 -- Table structure for synthesis_record
 -- ----------------------------
 DROP TABLE IF EXISTS `synthesis_record`;
@@ -500,10 +423,6 @@ CREATE TABLE `synthesis_record`  (
   INDEX `idx_user_id`(`user_id` ASC) USING BTREE,
   INDEX `idx_rule_id`(`rule_id` ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '合成记录' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Records of synthesis_record
--- ----------------------------
 
 -- ----------------------------
 -- Table structure for synthesis_rule
@@ -528,10 +447,6 @@ CREATE TABLE `synthesis_rule`  (
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '合成规则表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
--- Records of synthesis_rule
--- ----------------------------
-
--- ----------------------------
 -- Table structure for user
 -- ----------------------------
 DROP TABLE IF EXISTS `user`;
@@ -551,12 +466,6 @@ CREATE TABLE `user`  (
 ) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
--- Records of user
--- ----------------------------
-INSERT INTO `user` VALUES (2, '2026-08-19 16:59:48.204380', '2026-08-19 16:59:48.205379', 'admin', NULL, NULL, '15789788978', '$2a$10$XX6iLtmtgVWZIokElbcZ/OsIuXrKQGkU8jOncagEi/eprSw0zG0bq', 0, 'ADMIN');
-INSERT INTO `user` VALUES (5, '2026-08-19 18:23:57.504650', '2026-08-19 18:23:57.506649', 'user_eRGZceg5zO', NULL, NULL, '15844570908', NULL, 0, 'USER');
-
--- ----------------------------
 -- Table structure for user_card
 -- ----------------------------
 DROP TABLE IF EXISTS `user_card`;
@@ -572,10 +481,6 @@ CREATE TABLE `user_card`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_user_card`(`user_id` ASC, `card_id` ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户卡片' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Records of user_card
--- ----------------------------
 
 -- ----------------------------
 -- Table structure for user_coupon
@@ -602,10 +507,6 @@ CREATE TABLE `user_coupon`  (
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户优惠券表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
--- Records of user_coupon
--- ----------------------------
-
--- ----------------------------
 -- Table structure for user_we_chat
 -- ----------------------------
 DROP TABLE IF EXISTS `user_we_chat`;
@@ -619,9 +520,5 @@ CREATE TABLE `user_we_chat`  (
   UNIQUE INDEX `uk_open_id`(`open_id` ASC) USING BTREE,
   INDEX `idx_user_id`(`user_id` ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '微信用户关联' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Records of user_we_chat
--- ----------------------------
 
 SET FOREIGN_KEY_CHECKS = 1;
