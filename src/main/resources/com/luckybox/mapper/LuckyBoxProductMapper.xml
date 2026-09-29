@@ -15,4 +15,24 @@
                                                 #{id}
                                             </foreach>
     </select>
+    <select id="getBoxProductList" resultType="com.luckybox.pojo.vo.LuckyBoxProductItemVO">
+        select lbp.lucky_box_id, lbp.product_sku_id, lbp.probability, lbp.sort_order, lb.name as luckyBoxName, p.name
+        from lucky_box_product as lbp
+                 left join lucky_box as lb on lbp.lucky_box_id = lb.id
+                 left join product_sku as ps on lbp.product_sku_id = ps.id
+                 left join product as p on ps.product_id = p.id
+        where lbp.lucky_box_id in
+            <foreach collection="ids" open="(" close=")" separator="," item="id">
+                #{id}
+            </foreach>
+        ORDER BY lbp.lucky_box_id, lbp.sort_order
+    </select>
+    <select id="getBoxProduct" resultType="com.luckybox.pojo.vo.LuckyBoxProductItemVO">
+        select lbp.lucky_box_id, lbp.product_sku_id, lbp.probability, lbp.sort_order, lb.name as luckyBoxName, p.name
+        from lucky_box_product as lbp
+        left join lucky_box as lb on lbp.lucky_box_id = lb.id
+        left join product_sku as ps on lbp.product_sku_id = ps.id
+        left join product as p on ps.product_id = p.id
+        where lbp.lucky_box_id =#{id}
+    </select>
 </mapper>

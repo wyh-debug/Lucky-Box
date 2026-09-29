@@ -19,4 +19,8 @@ public interface ILuckyBoxProductService extends IService<LuckyBoxProduct> {
     Result batchAddLuckyBoxProduct(List<LuckyBoxProduct> luckyBoxProducts);
 
     Result deleteLuckyBoxProducts(List<Long> ids);
+
+    Result getLuckyBoxProduct(Long id);
+
+    Result getLuckyBoxProductsByBoxIds(List<Long> boxIds);
 }

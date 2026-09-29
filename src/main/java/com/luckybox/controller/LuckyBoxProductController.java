@@ -5,6 +5,7 @@ import com.luckybox.pojo.dto.Result;
 import com.luckybox.pojo.entity.LuckyBoxProduct;
 import com.luckybox.service.ILuckyBoxProductService;
 import jakarta.annotation.Resource;
+import org.apache.ibatis.annotations.Param;
 import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
@@ -42,10 +43,23 @@ public class LuckyBoxProductController {
     public Result update(@RequestBody LuckyBoxProduct luckyBoxProduct) {
         return luckyBoxProductService.updateLuckyBoxProduct(luckyBoxProduct);
     }
-    @GetMapping()
-    @AdminRequired
+    @GetMapping("/list")
     public Result getList() {
         return luckyBoxProductService.getLuckyBoxProducts();
+    }
+    @GetMapping("/{id}")
+    public Result get(@PathVariable("id") Long id) {
+        return luckyBoxProductService.getLuckyBoxProduct(id);
+    }
+
+    /**
+     * 根据boxId获取列表批量
+     * @param boxIds
+     * @return
+     */
+    @GetMapping("/boxIds/box-products")
+    public Result getProducts(@RequestBody List<Long> boxIds) {
+        return luckyBoxProductService.getLuckyBoxProductsByBoxIds(boxIds);
     }
 
 }

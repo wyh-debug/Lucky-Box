@@ -34,5 +34,9 @@ public class SystemConstants {
     public static final Integer NOTIFICATION_TYPE_BOX = 1;
     public static final Integer NOTIFICATION_TYPE_ORDER = 2;
 
+    //基础类分页设置
+    public static final int BOX_PAGE_NUM = 1;
+    public static final int BOX_PAGE_SIZE = 10;
+
 
 }

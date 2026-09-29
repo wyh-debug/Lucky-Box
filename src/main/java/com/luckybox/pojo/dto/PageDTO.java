@@ -2,6 +2,7 @@ package com.luckybox.pojo.dto;
 
 import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.luckybox.pojo.vo.LuckyBoxProductsVO;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -39,4 +40,16 @@ public class PageDTO{
         result.setData(voList);
         return result;
     }
+    //传封装好的
+    public static <PO, VO> PageDTO build(Page<PO> page, List<VO> list) {
+        PageDTO result = new PageDTO();
+        result.setPages(page.getPages());
+        result.setTotal(page.getTotal());
+        result.setCurrent(page.getCurrent());
+        result.setSize(page.getSize());
+        result.setData(list == null ? Collections.emptyList() : list);
+        return result;
+    }
+
+
 }
