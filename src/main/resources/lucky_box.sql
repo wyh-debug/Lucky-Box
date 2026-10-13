@@ -11,7 +11,7 @@
  Target Server Version : 260700
  File Encoding         : 65001
 
- Date: 27/09/2026 18:42:20
+ Date: 13/10/2026 11:15:28
 */
 
 SET NAMES utf8mb4;
@@ -40,7 +40,7 @@ CREATE TABLE `address`  (
   `is_top` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否置顶',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_user_id`(`user_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '地址表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '地址表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for base_order
@@ -162,6 +162,7 @@ CREATE TABLE `lucky_box`  (
   `category_id` bigint UNSIGNED NOT NULL COMMENT '类别ID',
   `box_type` tinyint(1) NOT NULL DEFAULT 0 COMMENT '盲盒类型：0-商品盲盒, 1-抽卡盲盒',
   `status` tinyint(1) NOT NULL DEFAULT 0 COMMENT '状态：0-启用, 1-禁用',
+  `total_stock` bigint NOT NULL,
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_category_id`(`category_id` ASC) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '盲盒' ROW_FORMAT = DYNAMIC;
@@ -202,6 +203,25 @@ CREATE TABLE `lucky_box_category`  (
 ) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '盲盒类别' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
+-- Table structure for lucky_box_draw_record
+-- ----------------------------
+DROP TABLE IF EXISTS `lucky_box_draw_record`;
+CREATE TABLE `lucky_box_draw_record`  (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `base_order_id` bigint UNSIGNED NOT NULL COMMENT '所属订单',
+  `lucky_box_id` bigint UNSIGNED NOT NULL COMMENT '盲盒ID',
+  `draw_index` int NOT NULL COMMENT '第几次抽（1~N）',
+  `winning_product_sku_id` bigint UNSIGNED NOT NULL COMMENT '中奖商品SKU',
+  `winning_product_snapshot` json NOT NULL COMMENT '中奖商品快照',
+  `cards_drawn` json NULL COMMENT '附赠卡片快照（可为空）',
+  `draw_time` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `product_order_id` bigint UNSIGNED NULL DEFAULT NULL COMMENT '关联发货单',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_base_order_id`(`base_order_id` ASC) USING BTREE,
+  INDEX `idx_lucky_box_id`(`lucky_box_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
 -- Table structure for lucky_box_order
 -- ----------------------------
 DROP TABLE IF EXISTS `lucky_box_order`;
@@ -210,10 +230,7 @@ CREATE TABLE `lucky_box_order`  (
   `lucky_box_id` bigint UNSIGNED NOT NULL COMMENT '盲盒ID',
   `lucky_box_snapshot` json NOT NULL COMMENT '盲盒信息快照',
   `lucky_box_count` int NOT NULL COMMENT '盲盒数量',
-  `winning_product_sku_id` bigint UNSIGNED NOT NULL COMMENT '抽中的商品SKU ID',
-  `winning_product_snapshot` json NOT NULL COMMENT '中奖商品快照',
   `product_order_id` bigint UNSIGNED NULL DEFAULT NULL COMMENT '关联的商品订单ID（发货单）',
-  `cards_drawn` json NULL COMMENT '附赠的卡片列表快照',
   PRIMARY KEY (`base_order_id`) USING BTREE,
   INDEX `idx_product_order_id`(`product_order_id` ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '盲盒订单项' ROW_FORMAT = DYNAMIC;
@@ -232,10 +249,12 @@ CREATE TABLE `lucky_box_product`  (
   `product_sku_id` bigint UNSIGNED NOT NULL COMMENT '商品SKU ID',
   `probability` decimal(10, 6) NOT NULL COMMENT '抽中概率（0~1）',
   `sort_order` int NULL DEFAULT 0 COMMENT '排序权重',
+  `status` tinyint NULL DEFAULT NULL COMMENT '状态0-启用 1-禁用',
+  `stock` bigint NULL DEFAULT NULL,
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_mystery_box_id`(`lucky_box_id` ASC) USING BTREE,
   INDEX `idx_product_sku_id`(`product_sku_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 12 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '盲盒-商品奖池关联表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 25 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '盲盒-商品奖池关联表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for notification
@@ -256,7 +275,7 @@ CREATE TABLE `notification`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_user_read`(`user_id` ASC, `is_read` ASC) USING BTREE,
   INDEX `idx_created_time`(`created_time` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '消息通知表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '消息通知表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for payment
