@@ -11,7 +11,7 @@ import java.util.Map;
 
 @Data
 @Accessors(chain = true)
-@TableName("product")
+@TableName(value = "product", autoResultMap = true)
 public class Product implements Serializable {
     private static final long serialVersionUID = 5L;
 

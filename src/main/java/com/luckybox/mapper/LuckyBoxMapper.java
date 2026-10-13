@@ -19,4 +19,7 @@ public interface LuckyBoxMapper extends BaseMapper<LuckyBox> {
     Page<LuckyBoxVO> getBoxList(Page page, @Param("dto") LuckyBoxSelectDTO luckyBoxSelectDTO);
 
     void updateBatchByIds(@Param("boxIds") Set<Long> boxIds);
+
+    @Select("select lb.*, lbc.name as categoryName from lucky_box as lb left join lucky_box_category as lbc on lb.category_id = lbc.id where lb.id = #{boxId}")
+    LuckyBox selectBox(@Param("boxId") Long boxId);
 }

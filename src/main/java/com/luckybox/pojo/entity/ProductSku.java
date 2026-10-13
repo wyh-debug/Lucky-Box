@@ -34,6 +34,6 @@ public class ProductSku implements Serializable {
     private Map<String, Object> specification;
     private String cover;                  // 规格封面
     private Long price;                    // 价格（单位：分）
-    private Integer stock;                 // 库存
+    private Long stock;                 // 库存
     private String description;            // 描述
 }

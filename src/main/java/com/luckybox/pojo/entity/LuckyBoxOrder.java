@@ -11,9 +11,10 @@ import java.time.LocalDateTime;
 @TableName("lucky_box_order")
 public class LuckyBoxOrder implements Serializable {
     private static final long serialVersionUID = 21L;
-    @TableField(value = "base_order_id")
+    @TableId(value = "base_order_id", type = IdType.INPUT)
     private Long id;// 盲盒订单ID
     private String luckyBoxSnapshot;     // 盲盒信息快照（JSON）
+    private Long luckyBoxId;
     private Integer luckyBoxCount;       // 盲盒数量
     private Long winningProductSkuId;      // 抽中的商品SKU ID
     private String winningProductSnapshot; // 中奖商品快照（JSON）

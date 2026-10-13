@@ -52,7 +52,7 @@ public class ProductOrderServiceImpl extends ServiceImpl<ProductOrderMapper, Pro
     @Transactional
     public Result addProductOrder(OrderDTO orderDTO) {
 
-        Long skuId = orderDTO.getSkuId();
+        Long skuId = orderDTO.getId();
         ProductSku sku = productSkuMapper.selectById(skuId);
         if(Objects.isNull(sku) || sku.getStock() - orderDTO.getCount() < 0) {
             return Result.fail("商品库存不足");
@@ -104,13 +104,13 @@ public class ProductOrderServiceImpl extends ServiceImpl<ProductOrderMapper, Pro
         BaseOrder baseOrder = new BaseOrder();
         baseOrder.setId(orderId);
         baseOrder.setType(SystemConstants.ORDER_TYPE_PRODUCT);
-        Address address = addressMapper.selectOne(new LambdaQueryWrapper<Address>().eq(Address::getUserId, userId).eq(Address::getIsTop, SystemConstants.ADDRESS_IS_TOP));
+        Address address = addressMapper.selectById(orderDTO.getAddressId());
         AddressDTO dto = BeanUtil.copyProperties(address, AddressDTO.class);
         baseOrder.setAddress(JSONUtil.toJsonStr(dto));
         baseOrderMapper.insert(baseOrder);
         ProductOrder productOrder = new ProductOrder();
         productOrder.setId(orderId);
-        productOrder.setProductSkuId(orderDTO.getSkuId());
+        productOrder.setProductSkuId(orderDTO.getId());
         productOrder.setCount(orderDTO.getCount());
         productOrderMapper.insert(productOrder);
         return true;

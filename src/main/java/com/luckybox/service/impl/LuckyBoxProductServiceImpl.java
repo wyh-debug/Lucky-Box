@@ -4,27 +4,34 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.luckybox.constant.RedisConstants;
 import com.luckybox.constant.SystemConstants;
 import com.luckybox.mapper.LuckyBoxMapper;
 import com.luckybox.mapper.LuckyBoxProductMapper;
+import com.luckybox.mapper.ProductSkuMapper;
 import com.luckybox.pojo.dto.NotificationDTO;
 import com.luckybox.pojo.dto.PageDTO;
+import com.luckybox.pojo.dto.ProductSkuDTO;
 import com.luckybox.pojo.dto.Result;
 import com.luckybox.pojo.entity.LuckyBox;
 import com.luckybox.pojo.entity.LuckyBoxCategory;
 import com.luckybox.pojo.entity.LuckyBoxProduct;
 
+import com.luckybox.pojo.entity.ProductSku;
 import com.luckybox.pojo.vo.LuckyBoxProductItemVO;
 import com.luckybox.pojo.vo.LuckyBoxProductsVO;
 import com.luckybox.service.ILuckyBoxProductService;
 import com.luckybox.service.INotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -35,6 +42,8 @@ public class LuckyBoxProductServiceImpl extends ServiceImpl<LuckyBoxProductMappe
     private final LuckyBoxMapper luckyBoxMapper;
     private final LuckyBoxProductMapper luckyBoxProductMapper;
     private final INotificationService notificationService;
+    private final ProductSkuMapper productSkuMapper;
+    private final RedissonClient redissonClient;
     @Override
     public Result addLuckyBoxProduct(LuckyBoxProduct luckyBoxProduct) {
         List<LuckyBoxProduct> list = this.list(new LambdaQueryWrapper<LuckyBoxProduct>().eq(LuckyBoxProduct::getLuckyBoxId, luckyBoxProduct.getLuckyBoxId()));
@@ -141,23 +150,64 @@ public class LuckyBoxProductServiceImpl extends ServiceImpl<LuckyBoxProductMappe
     }
 
     @Override
+    @Transactional
     public Result batchAddLuckyBoxProduct(List<LuckyBoxProduct> luckyBoxProducts) {
-        if(luckyBoxProducts == null && luckyBoxProducts.isEmpty()) {
+        if(luckyBoxProducts == null || luckyBoxProducts.isEmpty()) {
             return Result.ok();
         }
-        Long boxId = luckyBoxProducts.get(0).getLuckyBoxId();
-        List<LuckyBoxProduct> list = this.list(new LambdaQueryWrapper<LuckyBoxProduct>().eq(LuckyBoxProduct::getLuckyBoxId, boxId));
-        BigDecimal exists = list.stream().map(LuckyBoxProduct::getProbability).reduce(BigDecimal.ZERO, BigDecimal::add);
-        //概率是否过大
-        BigDecimal total = luckyBoxProducts.stream().map(LuckyBoxProduct::getProbability).reduce(exists, BigDecimal::add);
-        if(total.compareTo(BigDecimal.ONE) > 0) {
-            return Result.fail("添加失败，概率过大");
+        Long boxId = luckyBoxProducts.getFirst().getLuckyBoxId();
+//        对 boxId 加锁（Redisson ）
+        RLock lock = redissonClient.getLock(RedisConstants.BOX_ID_LOCK_KEY + boxId);
+        boolean isLock = lock.tryLock();
+        Map<String, Object> result = new HashMap<>();
+        try {
+            if(isLock) {
+                //查看盲盒id已经存在的列表
+                List<LuckyBoxProduct> list = this.list(new LambdaQueryWrapper<LuckyBoxProduct>().eq(LuckyBoxProduct::getLuckyBoxId, boxId));
+                BigDecimal exists = list.stream().map(LuckyBoxProduct::getProbability).reduce(BigDecimal.ZERO, BigDecimal::add);
+                //概率是否过大
+                BigDecimal total = luckyBoxProducts.stream().map(LuckyBoxProduct::getProbability).reduce(exists, BigDecimal::add);
+                if(total.compareTo(BigDecimal.ONE) > 0) {
+                    return Result.fail("添加失败，概率过大");
+                }
+                //判断添加商品的库存够不够
+                List<Long> skuIds = luckyBoxProducts.stream().map(LuckyBoxProduct::getProductSkuId).toList();
+                //skuid-stock > 0才可以
+                //批量获取所有id对应的库存
+                Map<Long, ProductSku> collect = productSkuMapper.selectBatchIds(skuIds).stream().collect(Collectors.toMap( ProductSku::getId, Function.identity()));
+                List<String> failReasons = new ArrayList<>();
+                List<LuckyBoxProduct> successList = new ArrayList<>();
+                //过滤后
+                List<LuckyBoxProduct> resultList = luckyBoxProducts.stream().filter(l -> {
+                    ProductSku productSku = collect.get(l.getProductSkuId());
+                    if(productSku == null) {
+                        failReasons.add("库存" + l.getProductSkuId() + "不存在");
+                        return false;
+                    }
+                    long count = productSku.getStock() - l.getStock();
+                    if(count < 0) {
+                        failReasons.add("库存" + l.getProductSkuId() + "不足");
+                        return false;
+                    }
+                    successList.add(l);
+                    return true;
+                }).toList();
+
+                boolean suc = luckyBoxProductMapper.insertBatch(resultList);
+                if(!suc) {
+                    return Result.fail("添加失败");
+                }
+
+                result.put("successCount", successList.size());
+                result.put("failReasons", failReasons);
+            }
+        } finally {
+            if(lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
         }
-        boolean suc = luckyBoxProductMapper.insertBatch(luckyBoxProducts);
-        if(!suc) {
-            return Result.fail("添加失败");
-        }
-        return Result.ok();
+
+        return Result.ok(result);
     }
 
     @Override

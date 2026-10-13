@@ -54,7 +54,7 @@ public class CacheClient {
         }
 
         if(json == null || StrUtil.isBlank(json)) {
-            RLock lock = redissonClient.getLock(RedisConstants.box_LOCK_KEY + id);
+            RLock lock = redissonClient.getLock(RedisConstants.BOX_LOCK_KEY + id);
             boolean isLock = false;
             //从数据库找
             isLock = lock.tryLock();
@@ -91,7 +91,7 @@ public class CacheClient {
             if(LocalDateTime.now().isAfter(data.getExpire())) {
                 //异步调用更新
                 EXECUTOR_SERVICE.submit(()->{
-                    RLock lock = redissonClient.getLock(RedisConstants.box_LOCK_KEY + id);
+                    RLock lock = redissonClient.getLock(RedisConstants.BOX_LOCK_KEY + id);
                     boolean isLock = false;
                     try {
                         isLock = lock.tryLock();
