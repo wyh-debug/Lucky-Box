@@ -25,4 +25,6 @@ public interface LuckyBoxProductMapper extends BaseMapper<LuckyBoxProduct> {
     List<LuckyBoxProductItemVO> getBoxProductList(@Param("ids") Set<Long> boxIds);
 
     LuckyBoxProductItemVO getBoxProduct(Long id);
+
+    boolean deductStock(@Param("id") Long id, @Param("count") int count);
 }

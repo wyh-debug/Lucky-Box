@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.luckybox.mapper.LuckyBoxDrawRecordMapper">
+
+    <insert id="insertBatch" useGeneratedKeys="true">
+        insert into lucky_box_draw_record (base_order_id, lucky_box_id, draw_index, status, address_id)
+        values
+            <foreach collection="list" item="i" separator="," >
+                (#{i.baseOrderId}, #{i.luckyBoxId}, #{i.drawIndex}, #{i.status}, #{i.addressId})
+            </foreach>
+    </insert>
+</mapper>

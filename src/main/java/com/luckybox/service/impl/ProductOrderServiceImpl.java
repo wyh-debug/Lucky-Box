@@ -116,5 +116,24 @@ public class ProductOrderServiceImpl extends ServiceImpl<ProductOrderMapper, Pro
         return true;
     }
 
+    @Override
+    public Long addOrder(Long id, Long skuId, Long addressId, int count) {
+        long orderId = orderIdGenerate.nextId("order:");
+        BaseOrder baseOrder = new BaseOrder();
+        baseOrder.setId(orderId);
+        baseOrder.setType(SystemConstants.ORDER_TYPE_PRODUCT);
+        Address address = addressMapper.selectById(addressId);
+        AddressDTO dto = BeanUtil.copyProperties(address, AddressDTO.class);
+        baseOrder.setAddress(JSONUtil.toJsonStr(dto));
+        baseOrderMapper.insert(baseOrder);
+        ProductOrder productOrder = new ProductOrder();
+        productOrder.setId(orderId);
+        productOrder.setProductSkuId(id);
+        productOrder.setCount(count);
+        productOrder.setProductSkuId(skuId);
+        productOrderMapper.insert(productOrder);
+        return orderId;
+    }
+
 
 }

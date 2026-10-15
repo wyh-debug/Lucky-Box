@@ -10,7 +10,7 @@ import java.util.Map;
 
 @Data
 @Accessors(chain = true)
-@TableName("product_sku")
+@TableName(value = "product_sku", autoResultMap = true)
 public class ProductSku implements Serializable {
     private static final long serialVersionUID = 6L;
 
@@ -32,6 +32,7 @@ public class ProductSku implements Serializable {
     private Long productId;                // 商品ID
     @TableField(typeHandler = JacksonTypeHandler.class)
     private Map<String, Object> specification;
+
     private String cover;                  // 规格封面
     private Long price;                    // 价格（单位：分）
     private Long stock;                 // 库存

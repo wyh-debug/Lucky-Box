@@ -33,8 +33,9 @@ public class LuckyBoxDrawRecord implements Serializable {
     @TableField(typeHandler = JacksonTypeHandler.class)
     private List<Map<String, Object>> cardsDrawn;        // 附赠卡片快照
 
-    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdTime;           // 抽奖时间
 
     private Long productOrderId;              // 关联发货单ID
+    private Integer status = 0;
+    private Long addressId;
 }

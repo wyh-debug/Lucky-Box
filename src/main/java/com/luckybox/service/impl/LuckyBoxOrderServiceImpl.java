@@ -18,23 +18,19 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
+
 
 @Service
 @RequiredArgsConstructor
 public class LuckyBoxOrderServiceImpl extends ServiceImpl<LuckyBoxOrderMapper, LuckyBoxOrder> implements ILuckyBoxOrderService {
     private final OrderIdGenerate orderIdGenerate;
-    private final CacheClient cacheClient;
     private final LuckyBoxMapper luckyBoxMapper;
     private final AddressMapper addressMapper;
     private final BaseOrderMapper baseOrderMapper;
     private final LuckyBoxOrderMapper luckyBoxOrderMapper;
-    private final LuckyBoxProductMapper luckyBoxProductMapper;
-    private final ProductSkuMapper productSkuMapper;
-    private final ProductMapper productMapper;
+    private final LuckyBoxDrawRecordMapper luckyBoxDrawRecordMapper;
     @Override
     @Transactional
     public Result addBoxOrder(OrderDTO orderDTO) {
@@ -64,6 +60,17 @@ public class LuckyBoxOrderServiceImpl extends ServiceImpl<LuckyBoxOrderMapper, L
         luckyBoxOrder.setLuckyBoxSnapshot(JSONUtil.toJsonStr(BeanUtil.copyProperties(luckyBox, LuckyBoxDTO.class)));
         luckyBoxOrder.setLuckyBoxCount(orderDTO.getCount());
         luckyBoxOrderMapper.insert(luckyBoxOrder);
+//        批量添加抽奖记录
+        List<LuckyBoxDrawRecord> luckyBoxDrawRecordList = new ArrayList<>();
+        for(int i = 0; i < orderDTO.getCount(); i++) {
+            LuckyBoxDrawRecord luckyBoxDrawRecord = new LuckyBoxDrawRecord();
+            luckyBoxDrawRecord.setBaseOrderId(orderId);
+            luckyBoxDrawRecord.setLuckyBoxId(orderDTO.getId());
+            luckyBoxDrawRecord.setDrawIndex(i + 1);
+            luckyBoxDrawRecord.setAddressId(orderDTO.getAddressId());
+            luckyBoxDrawRecordList.add(luckyBoxDrawRecord);
+        }
+        luckyBoxDrawRecordMapper.insertBatch(luckyBoxDrawRecordList);
         return Result.ok(orderId);
     }
 }
