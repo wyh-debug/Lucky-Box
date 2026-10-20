@@ -1,13 +1,11 @@
 package com.luckybox.utils;
 
 import cn.hutool.core.bean.BeanUtil;
-import cn.hutool.core.comparator.FuncComparator;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.luckybox.constant.RedisConstants;
 import com.luckybox.pojo.dto.RedisData;
-import com.luckybox.pojo.entity.LuckyBox;
 import jakarta.annotation.Resource;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
