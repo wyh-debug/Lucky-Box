@@ -10,4 +10,7 @@ import org.apache.ibatis.annotations.Select;
 public interface LuckyBoxCardMapper extends BaseMapper<LuckyBoxCard> {
     @Select("select exists(select 1 from lucky_box_card where lucky_box_id = #{id})")
     boolean existBox(@Param("id") Long id);
+
+    @Select("select exists(select 1 from lucky_box_card where card_id = #{id})")
+    boolean existCard(@Param("id") Long id);
 }

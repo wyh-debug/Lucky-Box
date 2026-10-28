@@ -1,11 +1,14 @@
 package com.luckybox.utils;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.luckybox.constant.RedisConstants;
+import com.luckybox.pojo.dto.CardDTO;
 import com.luckybox.pojo.dto.RedisData;
+import com.luckybox.pojo.dto.Result;
 import jakarta.annotation.Resource;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
@@ -27,6 +30,7 @@ public class CacheClient {
     @Resource
     private RedissonClient redissonClient;
 
+    private final Long RANDOM_ADD = 1000L;
     private static final ExecutorService EXECUTOR_SERVICE = Executors.newSingleThreadExecutor();
     /**
      * 逻辑保存数据到redis
@@ -43,6 +47,7 @@ public class CacheClient {
         stringRedisTemplate.opsForValue().set(key, JSONUtil.toJsonStr(redisData), timeout, unit);
     }
 
+    //逻辑过期
     public <ID, R>  R handleCacheBreakDown(String prefix, ID id, Class<?> clazz, Function<ID, R> dbFallback) {
         String key = prefix + id;
         //查询缓存
@@ -126,4 +131,50 @@ public class CacheClient {
             }
         }
     }
+
+    /**
+     * 防止缓存穿透，随机过期值
+     * @return
+     */
+    public <ID, R> R cacheNullValue(String prefix, ID id, Class<R> clazz, Long timeout, TimeUnit unit, Function<ID, R> function) {
+        String key = prefix + id;
+        String json = stringRedisTemplate.opsForValue().get(key);
+        if("NULL".equals(json)) {
+            return null;
+        }
+        if(StrUtil.isNotBlank(json)) {
+            return JSONUtil.toBean(json, clazz);
+        }
+        RLock lock = redissonClient.getLock(RedisConstants.LOCK_CARD_KEY + id);
+        boolean isLock = false;
+        try{
+            isLock = lock.tryLock();
+            if(!isLock) {
+                throw new Exception("系统繁忙稍后再试");
+            }
+            String retryJson = stringRedisTemplate.opsForValue().get(key);
+            if ("NULL".equals(retryJson)) {
+                return null;
+            }
+            if (StrUtil.isNotBlank(retryJson)) {
+                return JSONUtil.toBean(json, clazz);
+            }
+            R r = function.apply(id);
+            if(r == null) {
+                //存空字符串
+                stringRedisTemplate.opsForValue().set(key, "NULL", 5L, TimeUnit.MINUTES);
+                return null;
+            }
+            stringRedisTemplate.opsForValue().set(key, JSONUtil.toJsonStr(r), timeout + RandomUtil.randomLong(RANDOM_ADD), unit);
+            return r;
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        } finally {
+            if(isLock && lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
+        }
+    }
+
 }

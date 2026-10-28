@@ -19,4 +19,7 @@ public class RedisConstants {
     public static final Long CACHE_BOX_EXP = 1440L;
     public static final String BOX_LOCK_KEY = "box:lock:";
     public static final String BOX_ID_LOCK_KEY = "boxId:lock:";
+    public static final String CACHE_CARD_KEY = "cache:card:";
+    public static final Long CACHE_CARD_TTL = 36000L;
+    public static final String LOCK_CARD_KEY = "lock:card:";
 }

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.luckybox.mapper.ProductSkuMapper">
+
+    <update id="updateBatch">
+        update product_sku set stock = case id
+        <foreach collection="dto" item="i">
+            when #{i.productSkuId} then stock - #{i.stock}
+        </foreach>
+        end
+        where id in
+            <foreach collection="dto" item="i" separator="," close=")" open="(">
+                #{i.productSkuId}
+            </foreach>
+        AND stock >= CASE id
+        <foreach collection="dto" item="i">
+            WHEN #{i.productSkuId} THEN #{i.stock}
+        </foreach>
+        END
+    </update>
+</mapper>

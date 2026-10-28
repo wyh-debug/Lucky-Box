@@ -34,7 +34,7 @@ public class LuckyBox implements Serializable {
     private String cover;                  // 封面
     private Long categoryId;               // 类别ID
     private int boxType;                // 盲盒类型：0-商品盲盒, 1-抽卡盲盒
-    private Boolean status;                // 状态：0-启用, 1-禁用
+    private Integer status;                // 状态：0-启用, 1-禁用
     private Long totalStock;                //总库存
     private Long soldCount;             //售出 数量
     @TableField(exist = false)

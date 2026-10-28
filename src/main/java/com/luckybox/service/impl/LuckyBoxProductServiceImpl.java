@@ -97,10 +97,13 @@ public class LuckyBoxProductServiceImpl extends ServiceImpl<LuckyBoxProductMappe
             return Result.fail("没有该规则");
         }
         BigDecimal total = list.stream().map(LuckyBoxProduct::getProbability).reduce(BigDecimal.ZERO, BigDecimal::add);
-        if(total.subtract(boxProduct.getProbability()).add(luckyBoxProduct.getProbability()).compareTo(BigDecimal.ONE) > 0) {
+        if(total.subtract(boxProduct.getProbability()).add(luckyBoxProduct.getProbability()).compareTo(BigDecimal.ONE) > 0){
             return Result.fail("概率过大");
         }
         boolean suc = this.updateById(luckyBoxProduct);
+        if(total.subtract(boxProduct.getProbability()).add(luckyBoxProduct.getProbability()).compareTo(BigDecimal.ONE) < 0) {
+            luckyBoxMapper.update(new LambdaUpdateWrapper<LuckyBox>().eq(LuckyBox::getId, luckyBoxProduct.getLuckyBoxId()).set(LuckyBox::getStatus, SystemConstants.DISABLE));
+        }
         if(!suc) {
             return Result.fail("修改失败");
         }
@@ -159,7 +162,6 @@ public class LuckyBoxProductServiceImpl extends ServiceImpl<LuckyBoxProductMappe
 //        对 boxId 加锁（Redisson ）
         RLock lock = redissonClient.getLock(RedisConstants.BOX_ID_LOCK_KEY + boxId);
         boolean isLock = lock.tryLock();
-        Map<String, Object> result = new HashMap<>();
         try {
             if(isLock) {
                 //查看盲盒id已经存在的列表
@@ -167,47 +169,45 @@ public class LuckyBoxProductServiceImpl extends ServiceImpl<LuckyBoxProductMappe
                 BigDecimal exists = list.stream().map(LuckyBoxProduct::getProbability).reduce(BigDecimal.ZERO, BigDecimal::add);
                 //概率是否过大
                 BigDecimal total = luckyBoxProducts.stream().map(LuckyBoxProduct::getProbability).reduce(exists, BigDecimal::add);
+
                 if(total.compareTo(BigDecimal.ONE) > 0) {
                     return Result.fail("添加失败，概率过大");
                 }
                 //判断添加商品的库存够不够
                 List<Long> skuIds = luckyBoxProducts.stream().map(LuckyBoxProduct::getProductSkuId).toList();
-                //skuid-stock > 0才可以
-                //批量获取所有id对应的库存
-                Map<Long, ProductSku> collect = productSkuMapper.selectBatchIds(skuIds).stream().collect(Collectors.toMap( ProductSku::getId, Function.identity()));
-                List<String> failReasons = new ArrayList<>();
-                List<LuckyBoxProduct> successList = new ArrayList<>();
-                //过滤后
-                List<LuckyBoxProduct> resultList = luckyBoxProducts.stream().filter(l -> {
-                    ProductSku productSku = collect.get(l.getProductSkuId());
-                    if(productSku == null) {
-                        failReasons.add("库存" + l.getProductSkuId() + "不存在");
-                        return false;
+                Map<Long, ProductSku> skuMap = productSkuMapper.selectBatchIds(skuIds).stream()
+                        .collect(Collectors.toMap(ProductSku::getId, Function.identity()));
+                for(LuckyBoxProduct item : luckyBoxProducts) {
+                    ProductSku sku = skuMap.get(item.getProductSkuId());
+                    if (sku == null) {
+                        return Result.fail("商品SKU不存在: " + item.getProductSkuId());
                     }
-                    long count = productSku.getStock() - l.getStock();
-                    if(count < 0) {
-                        failReasons.add("库存" + l.getProductSkuId() + "不足");
-                        return false;
+                    // 判断真实库存是否够分给盲盒
+                    if (sku.getStock() - item.getStock() < 0) {
+                        return Result.fail("商品SKU库存不足，ID: " + item.getProductSkuId() + "，剩余库存: " + sku.getStock());
                     }
-                    successList.add(l);
-                    return true;
-                }).toList();
+                }
+                if(total.compareTo(BigDecimal.ONE) < 0) {
+                    luckyBoxMapper.update(new LambdaUpdateWrapper<LuckyBox>().set(LuckyBox::getStatus, SystemConstants.DISABLE).eq(LuckyBox::getId, luckyBoxProducts.getFirst().getLuckyBoxId()));
+                }
+                }
 
-                boolean suc = luckyBoxProductMapper.insertBatch(resultList);
+                productSkuMapper.updateBatch(luckyBoxProducts);
+
+                boolean suc = luckyBoxProductMapper.insertBatch(luckyBoxProducts);
+
                 if(!suc) {
                     return Result.fail("添加失败");
                 }
 
-                result.put("successCount", successList.size());
-                result.put("failReasons", failReasons);
-            }
+
         } finally {
             if(lock.isHeldByCurrentThread()) {
                 lock.unlock();
             }
         }
 
-        return Result.ok(result);
+        return Result.ok();
     }
 
     @Override

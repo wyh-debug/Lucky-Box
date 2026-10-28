@@ -1,6 +1,7 @@
 package com.luckybox.pojo.dto;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.luckybox.pojo.entity.CardType;
 import lombok.Data;
 
 @Data
@@ -17,7 +18,7 @@ public class PageQuery {
     private String orderDirection;
 
     private Integer sortType;           //排序类型
-    public Page<?> getPageQuery() {
+    public  Page<?> getPageQuery() {
         Page<?> page1 = new Page<>(this.page, this.size);
         return page1;
     }

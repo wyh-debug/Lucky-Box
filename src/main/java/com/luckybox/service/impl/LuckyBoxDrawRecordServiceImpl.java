@@ -3,19 +3,14 @@ package com.luckybox.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.RandomUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.luckybox.constant.RedisConstants;
 import com.luckybox.constant.SystemConstants;
-import com.luckybox.mapper.LuckyBoxDrawRecordMapper;
-import com.luckybox.mapper.LuckyBoxProductMapper;
-import com.luckybox.mapper.ProductMapper;
-import com.luckybox.mapper.ProductSkuMapper;
+import com.luckybox.mapper.*;
 import com.luckybox.pojo.dto.ProductSnapshotDTO;
 import com.luckybox.pojo.dto.Result;
-import com.luckybox.pojo.entity.LuckyBoxDrawRecord;
-import com.luckybox.pojo.entity.LuckyBoxProduct;
-import com.luckybox.pojo.entity.Product;
-import com.luckybox.pojo.entity.ProductSku;
+import com.luckybox.pojo.entity.*;
 import com.luckybox.service.ILuckyBoxDrawRecordService;
 import com.luckybox.service.IProductOrderService;
 import com.luckybox.utils.CacheClient;
@@ -37,6 +32,13 @@ public class LuckyBoxDrawRecordServiceImpl extends ServiceImpl<LuckyBoxDrawRecor
     private final ProductSkuMapper productSkuMapper;
     private final ProductMapper productMapper;
     private final IProductOrderService productOrderService;
+    private final LuckyBoxMapper luckyBoxMapper;
+
+    /**
+     * 记录id
+     * @param id
+     * @return
+     */
     @Override
     @Transactional
     public Result create(Long id) {
@@ -45,19 +47,18 @@ public class LuckyBoxDrawRecordServiceImpl extends ServiceImpl<LuckyBoxDrawRecor
         LuckyBoxDrawRecord luckyBoxDrawRecord = this.getOne(new LambdaQueryWrapper<LuckyBoxDrawRecord>().eq(LuckyBoxDrawRecord::getId, id).eq(LuckyBoxDrawRecord::getStatus, SystemConstants.ENABLE));
 //        根据概率抽商品
 //        获取规则列表
-        List<LuckyBoxProduct> list = luckyBoxProductMapper.selectList(new LambdaQueryWrapper<LuckyBoxProduct>().eq(LuckyBoxProduct::getLuckyBoxId, luckyBoxDrawRecord.getLuckyBoxId()).eq(LuckyBoxProduct::getStatus, SystemConstants.ENABLE));
-        List<LuckyBoxProduct> luckyBoxProducts = list.stream().filter(l -> {
-            if (l.getStock() == 0) {
-                l.setStatus(SystemConstants.DISABLE);
-                return false;
-            }
-            return true;
-        }).toList();
+        List<LuckyBoxProduct> luckyBoxProducts = luckyBoxProductMapper.selectList(new LambdaQueryWrapper<LuckyBoxProduct>().eq(LuckyBoxProduct::getLuckyBoxId, luckyBoxDrawRecord.getLuckyBoxId()).eq(LuckyBoxProduct::getStatus, SystemConstants.ENABLE));
         if(luckyBoxProducts.isEmpty()) {
             return Result.fail("无法抽奖，请申请退款");
         }
-        //概率归1
+        //概率不能变
         BigDecimal total = luckyBoxProducts.stream().map(LuckyBoxProduct::getProbability).reduce(BigDecimal.ZERO, BigDecimal::add);
+        if(total.compareTo(BigDecimal.ONE) != 0) {
+            luckyBoxMapper.update(new LambdaUpdateWrapper<LuckyBox>().set(LuckyBox::getStatus, SystemConstants.DISABLE).eq(LuckyBox::getId, luckyBoxDrawRecord.getLuckyBoxId()));
+            return Result.fail("盲盒无法抽奖");
+        }
+
+
         BigDecimal calculation = BigDecimal.ZERO;
         BigDecimal random = RandomUtil.randomBigDecimal(BigDecimal.ZERO, total);
         LuckyBoxProduct winner = null;
@@ -80,6 +81,9 @@ public class LuckyBoxDrawRecordServiceImpl extends ServiceImpl<LuckyBoxDrawRecor
         if(!suc) {
             Result.fail("库存不足");
         }
+        //设置安慰奖
+
+
 //        生成快照
 //        缓存获取product
         Product product = cacheClient.handleCacheBreakDown(RedisConstants.CACHE_PRODUCT_KEY, productSku.getProductId(), Product.class, productMapper::selectById);
