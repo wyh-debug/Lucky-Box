@@ -8,7 +8,7 @@ import com.luckybox.pojo.entity.ProductOrder;
 public interface IProductOrderService extends IService<ProductOrder> {
     Result addProductOrder(OrderDTO orderDTO);
 
-    boolean buildOrder(long orderId, OrderDTO orderDTO);
+//    boolean buildOrder(long orderId, OrderDTO orderDTO);
 
     /**
      * 魔盒直接发货，id是抽奖记录id

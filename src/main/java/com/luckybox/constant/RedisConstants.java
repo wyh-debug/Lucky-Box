@@ -22,4 +22,5 @@ public class RedisConstants {
     public static final String CACHE_CARD_KEY = "cache:card:";
     public static final Long CACHE_CARD_TTL = 36000L;
     public static final String LOCK_CARD_KEY = "lock:card:";
+    public static final String LOCK_PRODUCT_STOCK = "lock:product:stock:";
 }

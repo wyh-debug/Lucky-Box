@@ -31,7 +31,7 @@ public class Notification implements Serializable {
     private Long userId;      // 接收用户ID
     private String title;     // 标题
     private String content;   // 内容
-    private String type;      // 类型
+    private Integer type;      // 类型
     private Long bizId;       // 关联业务ID
     private Boolean isRead;   // 是否已读
 }

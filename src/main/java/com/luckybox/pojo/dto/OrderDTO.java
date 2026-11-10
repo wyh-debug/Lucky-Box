@@ -14,4 +14,5 @@ public class OrderDTO {
     private int count = 1;
     //收货地址id
     private Long addressId;
+    private String remark;
 }

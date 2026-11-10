@@ -43,6 +43,7 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
             return Result.fail("保存失败");
         }
         stringRedisTemplate.delete(RedisConstants.PRODUCT_SKU_KEY  + productSku.getProductId());
+        stringRedisTemplate.opsForValue().set(RedisConstants.LOCK_PRODUCT_STOCK + productSku.getId(), String.valueOf(productSku.getStock()));
         return Result.ok();
     }
 

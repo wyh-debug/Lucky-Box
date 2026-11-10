@@ -19,4 +19,8 @@
         </foreach>
         END
     </update>
+    <update id="deductStock">
+        update product_sku set stock = stock - #{count}
+        where id = #{skuId}
+    </update>
 </mapper>

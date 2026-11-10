@@ -16,6 +16,7 @@ import com.luckybox.service.IProductOrderService;
 import com.luckybox.utils.CacheClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +34,7 @@ public class LuckyBoxDrawRecordServiceImpl extends ServiceImpl<LuckyBoxDrawRecor
     private final ProductMapper productMapper;
     private final IProductOrderService productOrderService;
     private final LuckyBoxMapper luckyBoxMapper;
+    private final RabbitTemplate rabbitTemplate;
 
     /**
      * 记录id
@@ -51,6 +53,7 @@ public class LuckyBoxDrawRecordServiceImpl extends ServiceImpl<LuckyBoxDrawRecor
         if(luckyBoxProducts.isEmpty()) {
             return Result.fail("无法抽奖，请申请退款");
         }
+
         //概率不能变
         BigDecimal total = luckyBoxProducts.stream().map(LuckyBoxProduct::getProbability).reduce(BigDecimal.ZERO, BigDecimal::add);
         if(total.compareTo(BigDecimal.ONE) != 0) {

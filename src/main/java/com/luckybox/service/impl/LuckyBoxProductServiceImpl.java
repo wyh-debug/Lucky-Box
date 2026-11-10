@@ -4,20 +4,18 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.luckybox.constant.MqConstants;
 import com.luckybox.constant.RedisConstants;
 import com.luckybox.constant.SystemConstants;
 import com.luckybox.mapper.LuckyBoxMapper;
+import com.luckybox.mapper.LuckyBoxOrderMapper;
 import com.luckybox.mapper.LuckyBoxProductMapper;
 import com.luckybox.mapper.ProductSkuMapper;
-import com.luckybox.pojo.dto.NotificationDTO;
+import com.luckybox.pojo.dto.NoticeMessage;
 import com.luckybox.pojo.dto.PageDTO;
-import com.luckybox.pojo.dto.ProductSkuDTO;
 import com.luckybox.pojo.dto.Result;
-import com.luckybox.pojo.entity.LuckyBox;
-import com.luckybox.pojo.entity.LuckyBoxCategory;
-import com.luckybox.pojo.entity.LuckyBoxProduct;
+import com.luckybox.pojo.entity.*;
 
-import com.luckybox.pojo.entity.ProductSku;
 import com.luckybox.pojo.vo.LuckyBoxProductItemVO;
 import com.luckybox.pojo.vo.LuckyBoxProductsVO;
 import com.luckybox.service.ILuckyBoxProductService;
@@ -26,11 +24,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -44,15 +45,36 @@ public class LuckyBoxProductServiceImpl extends ServiceImpl<LuckyBoxProductMappe
     private final INotificationService notificationService;
     private final ProductSkuMapper productSkuMapper;
     private final RedissonClient redissonClient;
+    private final LuckyBoxOrderMapper luckyBoxOrderMapper;
+    private final RabbitTemplate rabbitTemplate;
+    private final StringRedisTemplate stringRedisTemplate;
     @Override
+    @Transactional
     public Result addLuckyBoxProduct(LuckyBoxProduct luckyBoxProduct) {
         List<LuckyBoxProduct> list = this.list(new LambdaQueryWrapper<LuckyBoxProduct>().eq(LuckyBoxProduct::getLuckyBoxId, luckyBoxProduct.getLuckyBoxId()));
         BigDecimal num = BigDecimal.ZERO;
+        // 1. 判断是不是保底商品（库存为 null 代表无限/保底）
+        boolean isFallback = (luckyBoxProduct.getStock() == null);
+
+        // 2. 如果是保底商品，强制概率为 0，防止污染正常奖池的概率
+        if (isFallback) {
+            luckyBoxProduct.setProbability(BigDecimal.ZERO);
+        }
+        //判断是否有库存
+        if(!isFallback) {
+            boolean isEnough = productSkuMapper.deductStock(luckyBoxProduct.getProductSkuId(), luckyBoxProduct.getStock() == null ? 0 : luckyBoxProduct.getStock());
+            if(!isEnough) {
+                return Result.fail("库存不足");
+            }
+        }
         for(LuckyBoxProduct l : list) {
             num = num.add(l.getProbability());
         }
         if((num.add(luckyBoxProduct.getProbability()).compareTo(BigDecimal.ONE) > 0)) {
             return Result.fail("概率过大");
+        }
+        if((num.add(luckyBoxProduct.getProbability()).compareTo(BigDecimal.ONE) < 0)) {
+            luckyBoxMapper.update(new LambdaUpdateWrapper<LuckyBox>().eq(LuckyBox::getId, luckyBoxProduct.getLuckyBoxId()).set(LuckyBox::getStatus, SystemConstants.DISABLE));
         }
         boolean suc = this.save(luckyBoxProduct);
         if(!suc) {
@@ -69,17 +91,16 @@ public class LuckyBoxProductServiceImpl extends ServiceImpl<LuckyBoxProductMappe
         if(boxProduct == null) {
             return Result.fail("不存在");
         }
+        //如果盲盒底下有订单就无法删除
         Long boxId = boxProduct.getLuckyBoxId();
         List<LuckyBoxProduct> list = this.list(new LambdaQueryWrapper<LuckyBoxProduct>().eq(LuckyBoxProduct::getLuckyBoxId, boxId));
+        boolean hasDefault = list.stream().anyMatch(i -> i.getStock() == null);
         //如果列表为空，暂时禁用，并通知管理员
-        if(list.size() <= 1) {
-            luckyBoxMapper.update(new LambdaUpdateWrapper<LuckyBox>().set(LuckyBox::getStatus, SystemConstants.DISABLE).eq(LuckyBox::getId, boxId));
-            NotificationDTO notificationDTO = new NotificationDTO();
-            notificationDTO.setTitle("盲盒规则为空通知");
-            notificationDTO.setType(SystemConstants.NOTIFICATION_TYPE_BOX);
-            notificationDTO.setContent("盲盒：" + boxId + "关联规则为空");
-            notificationDTO.setBizId(boxId);
-            notificationService.sendToAdmin(notificationDTO);
+        if(list.isEmpty() || !hasDefault) {
+            NoticeMessage noticeMessage = new NoticeMessage();
+            noticeMessage.setId(boxId);
+            rabbitTemplate.convertAndSend(MqConstants.NOTICE_TOPIC_EXCHANGE, MqConstants.NOTICE_INSERT_KEY, noticeMessage);
+            stringRedisTemplate.delete(RedisConstants.CACHE_BOX_KEY + boxId);
         }
         boolean suc = this.removeById(id);
         if(!suc) {
@@ -90,6 +111,9 @@ public class LuckyBoxProductServiceImpl extends ServiceImpl<LuckyBoxProductMappe
 
     @Override
     public Result updateLuckyBoxProduct(LuckyBoxProduct luckyBoxProduct) {
+
+        //判断是否有库存
+
         //查当前盲盒的所有
         List<LuckyBoxProduct> list = this.list(new LambdaQueryWrapper<LuckyBoxProduct>().eq(LuckyBoxProduct::getLuckyBoxId, luckyBoxProduct.getLuckyBoxId()));
         LuckyBoxProduct boxProduct = this.getById(luckyBoxProduct.getId());
@@ -101,6 +125,19 @@ public class LuckyBoxProductServiceImpl extends ServiceImpl<LuckyBoxProductMappe
             return Result.fail("概率过大");
         }
         boolean suc = this.updateById(luckyBoxProduct);
+       // 查一下目前数据库里还有没有保底商品（stock is null）
+        Long nullCount = this.count(new LambdaQueryWrapper<LuckyBoxProduct>()
+                .eq(LuckyBoxProduct::getLuckyBoxId, luckyBoxProduct.getLuckyBoxId())
+                .isNull(LuckyBoxProduct::getStock)
+        );
+
+        if (nullCount == 0) {
+            // 无保底禁用
+            luckyBoxMapper.update(null, new LambdaUpdateWrapper<LuckyBox>()
+                    .eq(LuckyBox::getId, luckyBoxProduct.getLuckyBoxId())
+                    .set(LuckyBox::getStatus, SystemConstants.DISABLE));
+        }
+        //概率<1禁用
         if(total.subtract(boxProduct.getProbability()).add(luckyBoxProduct.getProbability()).compareTo(BigDecimal.ONE) < 0) {
             luckyBoxMapper.update(new LambdaUpdateWrapper<LuckyBox>().eq(LuckyBox::getId, luckyBoxProduct.getLuckyBoxId()).set(LuckyBox::getStatus, SystemConstants.DISABLE));
         }
@@ -110,7 +147,6 @@ public class LuckyBoxProductServiceImpl extends ServiceImpl<LuckyBoxProductMappe
         return Result.ok();
     }
 
-    //没做完
     @Override
     public Result getLuckyBoxProducts() {
         //对所有盲盒查询
@@ -161,46 +197,67 @@ public class LuckyBoxProductServiceImpl extends ServiceImpl<LuckyBoxProductMappe
         Long boxId = luckyBoxProducts.getFirst().getLuckyBoxId();
 //        对 boxId 加锁（Redisson ）
         RLock lock = redissonClient.getLock(RedisConstants.BOX_ID_LOCK_KEY + boxId);
-        boolean isLock = lock.tryLock();
+        lock.tryLock();
+        boolean isLock;
         try {
-            if(isLock) {
-                //查看盲盒id已经存在的列表
-                List<LuckyBoxProduct> list = this.list(new LambdaQueryWrapper<LuckyBoxProduct>().eq(LuckyBoxProduct::getLuckyBoxId, boxId));
-                BigDecimal exists = list.stream().map(LuckyBoxProduct::getProbability).reduce(BigDecimal.ZERO, BigDecimal::add);
-                //概率是否过大
-                BigDecimal total = luckyBoxProducts.stream().map(LuckyBoxProduct::getProbability).reduce(exists, BigDecimal::add);
+            isLock = lock.tryLock(3, 10, TimeUnit.SECONDS);
+            if (!isLock) {
+                return Result.fail("系统繁忙，请稍后重试");
+            }
+            //查看盲盒id已经存在的列表
+            List<LuckyBoxProduct> list = this.list(new LambdaQueryWrapper<LuckyBoxProduct>().eq(LuckyBoxProduct::getLuckyBoxId, boxId));
+            BigDecimal exists = list.stream().map(LuckyBoxProduct::getProbability).reduce(BigDecimal.ZERO, BigDecimal::add);
+            //概率是否过大
+            BigDecimal total = luckyBoxProducts.stream().map(LuckyBoxProduct::getProbability).reduce(exists, BigDecimal::add);
 
-                if(total.compareTo(BigDecimal.ONE) > 0) {
-                    return Result.fail("添加失败，概率过大");
+            if(total.compareTo(BigDecimal.ONE) > 0) {
+                return Result.fail("添加失败，概率过大");
+            }
+            if(total.compareTo(BigDecimal.ONE) < 0) {
+                luckyBoxMapper.update(new LambdaUpdateWrapper<LuckyBox>().eq(LuckyBox::getId, boxId).set(LuckyBox::getStatus, SystemConstants.DISABLE));
+            }
+            //判断添加商品的库存够不够(过滤保底商品)
+            List<Long> skuIds = luckyBoxProducts.stream().filter(l -> l.getStock() != null).map(LuckyBoxProduct::getProductSkuId).toList();
+            Map<Long, ProductSku> skuMap = productSkuMapper.selectBatchIds(skuIds).stream()
+                    .collect(Collectors.toMap(ProductSku::getId, Function.identity()));
+            for(LuckyBoxProduct item : luckyBoxProducts) {
+                ProductSku sku = skuMap.get(item.getProductSkuId());
+                if (sku == null) {
+                    return Result.fail("商品SKU不存在: " + item.getProductSkuId());
                 }
-                //判断添加商品的库存够不够
-                List<Long> skuIds = luckyBoxProducts.stream().map(LuckyBoxProduct::getProductSkuId).toList();
-                Map<Long, ProductSku> skuMap = productSkuMapper.selectBatchIds(skuIds).stream()
-                        .collect(Collectors.toMap(ProductSku::getId, Function.identity()));
-                for(LuckyBoxProduct item : luckyBoxProducts) {
-                    ProductSku sku = skuMap.get(item.getProductSkuId());
-                    if (sku == null) {
-                        return Result.fail("商品SKU不存在: " + item.getProductSkuId());
-                    }
-                    // 判断真实库存是否够分给盲盒
-                    if (sku.getStock() - item.getStock() < 0) {
-                        return Result.fail("商品SKU库存不足，ID: " + item.getProductSkuId() + "，剩余库存: " + sku.getStock());
-                    }
+                // 判断真实库存是否够分给盲盒
+                if (sku.getStock() - item.getStock() < 0) {
+                    return Result.fail("商品SKU库存不足，ID: " + item.getProductSkuId() + "，剩余库存: " + sku.getStock());
                 }
+
                 if(total.compareTo(BigDecimal.ONE) < 0) {
                     luckyBoxMapper.update(new LambdaUpdateWrapper<LuckyBox>().set(LuckyBox::getStatus, SystemConstants.DISABLE).eq(LuckyBox::getId, luckyBoxProducts.getFirst().getLuckyBoxId()));
                 }
                 }
 
-                productSkuMapper.updateBatch(luckyBoxProducts);
+            int c = productSkuMapper.updateBatch(luckyBoxProducts);
+            if(c != luckyBoxProducts.size()) {
+                return Result.fail("添加失败");
+            }
 
-                boolean suc = luckyBoxProductMapper.insertBatch(luckyBoxProducts);
+            boolean suc = luckyBoxProductMapper.insertBatch(luckyBoxProducts);
+                Long count = this.count(new LambdaQueryWrapper<LuckyBoxProduct>().eq(LuckyBoxProduct::getLuckyBoxId, luckyBoxProducts.getFirst().getLuckyBoxId())
+                        .isNull(LuckyBoxProduct::getStock));
+
+                if(count == 0) {
+                    // 无保底禁用
+                    luckyBoxMapper.update(null, new LambdaUpdateWrapper<LuckyBox>()
+                            .eq(LuckyBox::getId, luckyBoxProducts.getFirst().getLuckyBoxId())
+                            .set(LuckyBox::getStatus, SystemConstants.DISABLE));
+                }
 
                 if(!suc) {
                     return Result.fail("添加失败");
                 }
 
 
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         } finally {
             if(lock.isHeldByCurrentThread()) {
                 lock.unlock();
@@ -220,34 +277,38 @@ public class LuckyBoxProductServiceImpl extends ServiceImpl<LuckyBoxProductMappe
         }
         //获取魔盒id
         boxIds =  luckyBoxProducts.stream().map(LuckyBoxProduct::getLuckyBoxId).collect(Collectors.toSet());
+        Long count = luckyBoxOrderMapper.selectCount(new LambdaQueryWrapper<LuckyBoxOrder>().in(LuckyBoxOrder::getLuckyBoxId, boxIds));
+
+        if(count > 0) {
+            return Result.fail("盲盒有订单，无法删除");
+        }
         //批量删除规则
         this.removeBatchByIds(ids);
         List<LuckyBoxProduct> list = luckyBoxProductMapper.getBatchByBoxIds(boxIds);
-        //全部都没有
-        if(list == null || list.isEmpty()) {
-            //批量禁用
-            luckyBoxMapper.updateBatchByIds(boxIds);
+        // 先把剩余奖品按盲盒 ID 分组（注意：这里只包含还有奖品的盲盒）
+        Map<Long, List<LuckyBoxProduct>> remainMap = list.stream()
+                .collect(Collectors.groupingBy(LuckyBoxProduct::getLuckyBoxId));
+        Set<Long> disableIds = new HashSet<>();
+        for (Long boxId : boxIds) {
+            // 获取该盲盒剩下的奖品（如果被彻底删空了，这里返回空集合）
+            List<LuckyBoxProduct> remainProducts = remainMap.getOrDefault(boxId, Collections.emptyList());
 
-            NotificationDTO notificationDTO = new NotificationDTO();
-            notificationDTO.setTitle("盲盒规则为空通知");
-            notificationDTO.setType(SystemConstants.NOTIFICATION_TYPE_BOX);
-            //在内容里添加 关联 业务id
-            notificationDTO.setContent("盲盒：" + boxIds + "关联规则为空");
-            notificationService.sendToAdmin(notificationDTO);
-            return Result.ok();
-        }
-        //部分没有
-        Map<Long, List<LuckyBoxProduct>> collect = list.stream().collect(Collectors.groupingBy(LuckyBoxProduct::getLuckyBoxId));
-        Iterator<Map.Entry<Long, List<LuckyBoxProduct>>> iterator = collect.entrySet().iterator();
-        while (iterator.hasNext()) {
-            Map.Entry<Long, List<LuckyBoxProduct>> entry = iterator.next();
-            if(entry.getValue().isEmpty()) {
-                luckyBoxMapper.update(new LambdaUpdateWrapper<LuckyBox>().set(LuckyBox::getStatus, SystemConstants.DISABLE).eq(LuckyBox::getId, entry.getKey()));
-                NotificationDTO notificationDTO = new NotificationDTO();
-                notificationDTO.setContent("盲盒：" + boxIds + "关联规则为空");
-                notificationDTO.setType(SystemConstants.NOTIFICATION_TYPE_BOX);
-                notificationService.sendToAdmin(notificationDTO);
+            // 判断条件：如果没奖品了 || 剩下的里没保底
+            boolean hasProducts = remainProducts.isEmpty();
+            boolean hasFallback = remainProducts.stream().anyMatch(p -> p.getStock() == null);
+
+            if (hasProducts || !hasFallback) {
+                disableIds.add(boxId);
             }
+        }
+        if(!disableIds.isEmpty()) {
+            luckyBoxMapper.update(new LambdaUpdateWrapper<LuckyBox>().set(LuckyBox::getStatus, SystemConstants.DISABLE).in(LuckyBox::getId, disableIds));
+            //发送消息队列
+            NoticeMessage noticeMessage = new NoticeMessage();
+            noticeMessage.setIds(disableIds);
+            rabbitTemplate.convertAndSend(MqConstants.NOTICE_TOPIC_EXCHANGE, MqConstants.NOTICE_INSERT_KEY, noticeMessage);
+            Set<String> boxCacheIds = disableIds.stream().map(i -> RedisConstants.CACHE_BOX_KEY + i).collect(Collectors.toSet());
+            stringRedisTemplate.delete(boxCacheIds);
         }
         return Result.ok();
     }

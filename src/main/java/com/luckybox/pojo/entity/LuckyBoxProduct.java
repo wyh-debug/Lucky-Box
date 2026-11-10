@@ -32,6 +32,6 @@ public class LuckyBoxProduct implements Serializable {
     private Long productSkuId;             // 商品SKU ID
     private BigDecimal probability;        // 抽中概率（0~1）
     private Integer sortOrder;             // 排序权重
-    private Long stock;
+    private Integer stock;
     private Integer status = 0;
 }

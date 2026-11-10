@@ -16,5 +16,7 @@ public interface ProductSkuMapper extends BaseMapper<ProductSku> {
     boolean existsProductSku(@Param("id") Long productId);
 
     //根据id批量减库存
-    boolean updateBatch(@Param("dto") List<LuckyBoxProduct> boxProducts);
+    int updateBatch(@Param("dto") List<LuckyBoxProduct> boxProducts);
+    //单独减
+    boolean deductStock(@Param("id") Long skuId, @Param("count") Integer count);
 }

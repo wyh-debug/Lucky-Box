@@ -1,6 +1,8 @@
 package com.luckybox.pojo.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
@@ -10,6 +12,7 @@ import java.time.LocalDateTime;
 @Data
 @Accessors(chain = true)
 @NoArgsConstructor
+@AllArgsConstructor
 @TableName("base_order")
 public class BaseOrder implements Serializable {
     private static final long serialVersionUID = 16L;
